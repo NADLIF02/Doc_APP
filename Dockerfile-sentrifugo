@@ -1,78 +1,47 @@
-# Utiliser une version plus récente et supportée d'Ubuntu
 FROM ubuntu:20.04
 
-# Mettre à jour le mainteneur (utiliser LABEL est la pratique recommandée maintenant)
-LABEL maintainer="Sreekanth G S <mail@sreekanth.in>"
+# Setup the environment
+RUN apt-get -y update && \
+    apt-get -y install software-properties-common wget && \
+    add-apt-repository -y ppa:ondrej/php && \
+    apt-get -y update
 
-# Définir le frontend non interactif pour Docker build
-ENV DEBIAN_FRONTEND=noninteractive
+# Install PHP 7.2 and required extensions
+RUN apt-get install -y \
+        php7.2 \
+        libapache2-mod-php7.2 \
+        php7.2-common \
+        php7.2-mbstring \
+        php7.2-xmlrpc \
+        php7.2-soap \
+        php7.2-gd \
+        php7.2-xml \
+        php7.2-intl \
+        php7.2-mysql \
+        php7.2-cli \
+        php7.2-ldap \
+        php7.2-zip \
+        php7.2-curl
 
-# Mise à jour du système et installation des pré-requis
-RUN apt-get update && \
-    apt-get install -y software-properties-common locales && \
-    locale-gen en_US.UTF-8
+# Download PHPUnit
+RUN wget -O phpunit https://phar.phpunit.de/phpunit-8.phar && \
+    chmod +x phpunit && \
+    mv phpunit /usr/local/bin/phpunit
 
-# Configuration des variables d'environnement pour la localisation
-ENV LANG=en_US.UTF-8 \
-    LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8
+# Clean up
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/* 
 
-# Ajout du PPA pour PHP depuis Ondrej
-RUN add-apt-repository ppa:ondrej/php && \
-    apt-get update
+# Copy configurations and application files
+COPY sentrifugo.conf /etc/apache2/sites-available/sentrifugo.conf
+COPY --chown=www-data:www-data sentrifugo /var/www/html/
 
-# Installation des paquets nécessaires
-RUN apt-get install -y apache2-bin libapache2-mod-php php-curl php-ldap php-mysql php-mcrypt \
-    php-gd php-xml patch curl vim git mysql-client wget unzip
 
-# Activation des modules PHP et Apache nécessaires
-RUN phpenmod mcrypt gd && \
-    a2enmod xml2enc rewrite
+# Configure Apache and restart
+RUN a2ensite sentrifugo && \
+    a2enmod rewrite && \
+    service apache2 restart && \
+    rm /var/www/html/index.html
 
-# Confirmer que les fichiers php.ini existent et modifier la configuration de PHP
-RUN find /etc/php/ -name php.ini -exec echo Found ini file at: {} \; && \
-    find /etc/php/ -name php.ini -exec sed -i 's/variables_order = .*/variables_order = "EGPCS"/' {} \;
-
-# Créer le groupe sentrifugo et ajouter l'utilisateur pour Apache
-RUN groupadd sentrifugo && \
-    useradd --uid 1000 --gid sentrifugo --create-home --shell /bin/bash docker && \
-    echo "export APACHE_RUN_USER=docker" >> /etc/apache2/envvars && \
-    echo "export APACHE_RUN_GROUP=sentrifugo" >> /etc/apache2/envvars
-
-# Configuration des sites par défaut d'Apache
-COPY 000-default.conf /etc/apache2/sites-enabled/000-default.conf
-
-# Assurez-vous que le répertoire /var/www/html existe
-RUN mkdir -p /var/www/html
-
-# Télécharger et préparer Sentrifugo
-RUN wget -q "http://www.sentrifugo.com/home/downloadfile?file_name=Sentrifugo.zip" -O Sentrifugo.zip && \
-    unzip Sentrifugo.zip && \
-    mv Sentrifugo_3.2 /var/www/html/sentrifugo && \
-    chown -R docker:sentrifugo /var/www/html/sentrifugo
-
-WORKDIR /var/www/html/sentrifugo
-
-# Copier le script entrypoint
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Attribuer les permissions nécessaires pour Sentrifugo
-RUN chmod 777 -R public/downloads public/uploads public/email_constants.php \
-    public/emptabconfigure.php \
-    public/site_constants.php \
-    public/db_constants.php \
-    public/application_constants.php \
-    public/mail_settings_constants.php \
-    logs/application.log \
-    application/modules/default/plugins/AccessControl.php \
-    install
-
-# Définir les volumes pour les téléchargements et les téléversements
-VOLUME ["/var/www/html/sentrifugo/public/uploads", "/var/www/html/sentrifugo/public/downloads"]
-
-# Point d'entrée
-ENTRYPOINT ["/entrypoint.sh"]
-
-# Exposer le port 80
-EXPOSE 80
+# Start Apache
+CMD ["apache2ctl", "-D", "FOREGROUND"]
