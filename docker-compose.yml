@@ -1,31 +1,36 @@
-version: '3.9'  # Mise à jour vers une sous-version plus récente qui supporte de nouvelles fonctionnalités
+version: '3.9'  # Current Docker Compose file format version
 
 services:
   sentrifugo:
-    build: ./Dockerfile-sentrifugo
+    build:
+      context: .  # Specify the directory containing the Dockerfile
+      dockerfile: Dockerfile-sentrifugo  # Correct path to the Dockerfile
     container_name: sentrifugo
     ports:
-      - "8080:80"  # Exposition du port 80 sur le port 8080 de l'hôte
-      - "8443:443" # Exposition du port 443 sur le port 8443 de l'hôte
+      - "8080:80"  # Map port 80 in the container to port 8080 on the host
+      - "8443:443" # Map port 443 in the container to port 8443 on the host
     depends_on:
-      - mariadb  # Utilisation de 'depends_on' au lieu de 'links'
-    restart: always
+      - mariadb  # Ensure Sentrifugo starts after MariaDB is available
+    restart: always  # Always restart unless stopped manually
 
   mariadb:
-    build: ./Dockerfile-mariadb
+    build:
+      context: .  # Specify the directory containing the Dockerfile
+      dockerfile: Dockerfile-mariadb  # Correct path to the Dockerfile
     container_name: mariadb
-    # Si le port MariaDB doit être accessible depuis l'hôte, décommentez la ligne suivante :
     ports:
-      - "3306:3306"
+      - "3306:3306"  # Uncomment this if you need to access the database from the host
     environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword  # Définir un mot de passe root (changez 'rootpassword' pour votre mot de passe)
-      - MYSQL_DATABASE=sentrifugo_db      # Nom de la base de données à créer
-      - MYSQL_USER=sentrifugo_user        # Nom de l'utilisateur de la base de données
-      - MYSQL_PASSWORD=sentrifugo_pass    # Mot de passe pour l'utilisateur de la base de données
+      MYSQL_ROOT_PASSWORD: rootpassword  # Use environment variables for database configuration
+      MYSQL_DATABASE: sentrifugo_db
+      MYSQL_USER: sentrifugo_user
+      MYSQL_PASSWORD: sentrifugo_pass
     volumes:
-      - mariadb_data:/var/lib/mysql  # Persistance des données MariaDB
- restart: always
-# Réseaux pour la communication entre conteneurs
+      - mariadb_data:/var/lib/mysql  # Ensure data persistence across container restarts
+    restart: always  # Always restart unless stopped manually
+
+volumes:
+  mariadb_data:  # Define the volume
+
 networks:
-  default:
-    driver: bridge
+  default:  # Use the default network
