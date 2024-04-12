@@ -33,10 +33,11 @@ RUN phpenmod mcrypt gd && \
 RUN find /etc/php/ -name php.ini -exec echo Found ini file at: {} \; && \
     find /etc/php/ -name php.ini -exec sed -i 's/variables_order = .*/variables_order = "EGPCS"/' {} \;
 
-# Ajouter l'utilisateur pour Apache
-RUN useradd --uid 1000 --gid 50 docker && \
+# Créer le groupe sentrifugo et ajouter l'utilisateur pour Apache
+RUN groupadd sentrifugo && \
+    useradd --uid 1000 --gid sentrifugo --create-home --shell /bin/bash docker && \
     echo "export APACHE_RUN_USER=docker" >> /etc/apache2/envvars && \
-    echo "export APACHE_RUN_GROUP=staff" >> /etc/apache2/envvars
+    echo "export APACHE_RUN_GROUP=sentrifugo" >> /etc/apache2/envvars
 
 # Configuration des sites par défaut d'Apache
 COPY 000-default.conf /etc/apache2/sites-enabled/000-default.conf
