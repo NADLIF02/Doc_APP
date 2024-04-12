@@ -1,36 +1,33 @@
-version: '3.9'  # Current Docker Compose file format version
+version: '3.9'  # Use a recent version
 
 services:
   sentrifugo:
     build:
-      context: .  # Specify the directory containing the Dockerfile
-      dockerfile: Dockerfile-sentrifugo  # Correct path to the Dockerfile
+      context: .  # Ensure Dockerfile is in the same directory or specify the path
+      dockerfile: Dockerfile-sentrifugo
     container_name: sentrifugo
     ports:
-      - "8080:80"  # Map port 80 in the container to port 8080 on the host
-      - "8443:443" # Map port 443 in the container to port 8443 on the host
+      - "8080:80"  # HTTP
+      - "8443:443" # HTTPS, ensure SSL is configured if using this in production
     depends_on:
-      - mariadb  # Ensure Sentrifugo starts after MariaDB is available
-    restart: always  # Always restart unless stopped manually
+      - mariadb
+    restart: always
 
   mariadb:
     build:
-      context: .  # Specify the directory containing the Dockerfile
-      dockerfile: Dockerfile-mariadb  # Correct path to the Dockerfile
+      context: .  
+      dockerfile: Dockerfile-mariadb
     container_name: mariadb
     ports:
-      - "3306:3306"  # Uncomment this if you need to access the database from the host
+      - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword  # Use environment variables for database configuration
+      MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: sentrifugo_db
       MYSQL_USER: sentrifugo_user
       MYSQL_PASSWORD: sentrifugo_pass
     volumes:
-      - mariadb_data:/var/lib/mysql  # Ensure data persistence across container restarts
-    restart: always  # Always restart unless stopped manually
+      - mariadb_data:/var/lib/mysql
+    restart: always
 
 volumes:
-  mariadb_data:  # Define the volume
-
-networks:
-  default:  # Use the default network
+  mariadb_data:
