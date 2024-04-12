@@ -29,9 +29,9 @@ RUN apt-get install -y apache2-bin libapache2-mod-php php-curl php-ldap php-mysq
 RUN phpenmod mcrypt gd && \
     a2enmod xml2enc rewrite
 
-# Modifier la configuration de PHP
-RUN sed -i 's/variables_order = .*/variables_order = "EGPCS"/' /etc/php/7.4/apache2/php.ini && \
-    sed -i 's/variables_order = .*/variables_order = "EGPCS"/' /etc/php/7.4/cli/php.ini
+# Confirmer que les fichiers php.ini existent et modifier la configuration de PHP
+RUN find /etc/php/ -name php.ini -exec echo Found ini file at: {} \; && \
+    find /etc/php/ -name php.ini -exec sed -i 's/variables_order = .*/variables_order = "EGPCS"/' {} \;
 
 # Ajouter l'utilisateur pour Apache
 RUN useradd --uid 1000 --gid 50 docker && \
