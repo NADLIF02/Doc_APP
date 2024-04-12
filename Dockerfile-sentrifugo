@@ -1,75 +1,68 @@
-# Utiliser une version plus récente et supportée d'Ubuntu
+# Use a more recent and supported version of Ubuntu
 FROM ubuntu:20.04
 
-# Mettre à jour le mainteneur (utiliser LABEL est la pratique recommandée maintenant)
+# Update maintainer information
 LABEL maintainer="Sreekanth G S <mail@sreekanth.in>"
 
-# Définir le frontend non interactif pour Docker build
+# Set non-interactive frontend (prevents some prompts)
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Mise à jour du système et installation des pré-requis
+# Install prerequisites, update system and install packages
 RUN apt-get update && \
     apt-get install -y software-properties-common locales && \
-    locale-gen en_US.UTF-8
+    locale-gen en_US.UTF-8 && \
+    add-apt-repository ppa:ondrej/php && \
+    apt-get update && \
+    apt-get install -y apache2 libapache2-mod-php php-curl php-ldap php-mysql php-mcrypt \
+    php-gd php-xml patch curl vim git mysql-client wget unzip && \
+    # Clean up to reduce layer size
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Configuration des variables d'environnement pour la localisation
+# Set environment variables for localization
 ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8
 
-# Ajout du PPA pour PHP depuis Ondrej
-RUN add-apt-repository ppa:ondrej/php && \
-    apt-get update
-
-# Installation des paquets nécessaires
-RUN apt-get install -y apache2 libapache2-mod-php php-curl php-ldap php-mysql php-mcrypt \
-    php-gd php-xml patch curl vim git mysql-client wget unzip
-
-# Activation des modules PHP et Apache nécessaires
+# Enable PHP and Apache modules
 RUN phpenmod mcrypt gd && \
     a2enmod xml2enc rewrite
 
-# Configuration des fichiers php.ini
-RUN find /etc/php/ -name php.ini -exec echo Found ini file at: {} \; && \
-    find /etc/php/ -name php.ini -exec sed -i 's/variables_order = .*/variables_order = "EGPCS"/' {} \;
+# Configure php.ini files
+RUN find /etc/php/ -name php.ini -exec sed -i 's/variables_order = .*/variables_order = "EGPCS"/' {} \;
 
-# Créer le groupe sentrifugo et ajouter l'utilisateur pour Apache
+# Create a group and user for Apache
 RUN groupadd sentrifugo && \
     useradd --uid 1000 --gid sentrifugo --create-home --shell /bin/bash docker && \
     echo "export APACHE_RUN_USER=docker" >> /etc/apache2/envvars && \
     echo "export APACHE_RUN_GROUP=sentrifugo" >> /etc/apache2/envvars
 
-# Configuration des sites par défaut d'Apache et set ServerName
-COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
-RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf && \
-    a2ensite 000-default.conf
+# Set the ServerName globally to suppress a message
+RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf
 
-# Assurez-vous que le répertoire /var/www/html existe
+# Configure the default Apache site
+COPY 000-default.conf /etc/apache2/sites-available/
+RUN a2ensite 000-default.conf
+
+# Ensure the HTML directory exists
 RUN mkdir -p /var/www/html
 
-# Télécharger et préparer Sentrifugo
+# Download and prepare Sentrifugo
 RUN wget -q "http://www.sentrifugo.com/home/downloadfile?file_name=Sentrifugo.zip" -O Sentrifugo.zip && \
     unzip Sentrifugo.zip && \
     mv Sentrifugo_3.2 /var/www/html/sentrifugo && \
-    chown -R docker:sentrifugo /var/www/html/sentrifugo
+    chown -R docker:sentrifugo /var/www/html/sentrifugo && \
+    # Set secure file permissions
+    find /var/www/html/sentrifugo -type d -exec chmod 750 {} \; && \
+    find /var/www/html/sentrifugo -type f -exec chmod 640 {} \;
 
+# Set the working directory
 WORKDIR /var/www/html/sentrifugo
 
-# Attribuer les permissions nécessaires pour Sentrifugo
-RUN chmod 777 -R public/downloads public/uploads public/email_constants.php \
-    public/emptabconfigure.php \
-    public/site_constants.php \
-    public/db_constants.php \
-    public/application_constants.php \
-    public/mail_settings_constants.php \
-    logs/application.log \
-    application/modules/default/plugins/AccessControl.php \
-    install
-
-# Définir les volumes pour les téléchargements et les téléversements
+# Declare volumes for uploads and downloads
 VOLUME ["/var/www/html/sentrifugo/public/uploads", "/var/www/html/sentrifugo/public/downloads"]
 
-# Exposer le port 80
+# Expose port 80 for HTTP traffic
 EXPOSE 80
 
 # Start Apache in the foreground
