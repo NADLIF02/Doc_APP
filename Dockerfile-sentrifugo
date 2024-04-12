@@ -42,10 +42,13 @@ RUN groupadd sentrifugo && \
 # Configuration des sites par défaut d'Apache
 COPY 000-default.conf /etc/apache2/sites-enabled/000-default.conf
 
+# Assurez-vous que le répertoire /var/www/html existe
+RUN mkdir -p /var/www/html
+
 # Télécharger et préparer Sentrifugo
 RUN wget -q "http://www.sentrifugo.com/home/downloadfile?file_name=Sentrifugo.zip" -O Sentrifugo.zip && \
     unzip Sentrifugo.zip && \
-    mv Sentrifugo_3.2 sentrifugo && \
+    mv Sentrifugo_3.2 /var/www/html/sentrifugo && \
     chown -R docker:sentrifugo /var/www/html/sentrifugo
 
 WORKDIR /var/www/html/sentrifugo
