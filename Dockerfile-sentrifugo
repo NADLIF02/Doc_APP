@@ -76,11 +76,5 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 # Exposer le port 80
 EXPOSE 80
-# Configure Apache and restart
-RUN a2ensite sentrifugo && \
-    a2enmod rewrite && \
-    service apache2 restart && \
-    rm /var/www/html/index.html
-
 # Start Apache
 CMD ["apache2ctl", "-D", "FOREGROUND"]
