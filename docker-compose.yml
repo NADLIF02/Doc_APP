@@ -15,8 +15,8 @@ services:
     build: ./Dockerfile-mariadb
     container_name: mariadb
     # Si le port MariaDB doit être accessible depuis l'hôte, décommentez la ligne suivante :
-    # ports:
-    #   - "3306:3306"
+    ports:
+      - "3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=rootpassword  # Définir un mot de passe root (changez 'rootpassword' pour votre mot de passe)
       - MYSQL_DATABASE=sentrifugo_db      # Nom de la base de données à créer
