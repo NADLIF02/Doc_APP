@@ -1,4 +1,4 @@
-version: '3.8'  # Mise à jour vers une sous-version plus récente qui supporte de nouvelles fonctionnalités
+version: '4.2'  # Mise à jour vers une sous-version plus récente qui supporte de nouvelles fonctionnalités
 
 services:
   sentrifugo:
