@@ -1,0 +1,44 @@
+version: '3.8'  # Mise à jour vers une sous-version plus récente qui supporte de nouvelles fonctionnalités
+
+services:
+  sentrifugo:
+    build:
+      context: .
+      dockerfile: Dockerfile-sentrifugo
+    container_name: sentrifugo
+    ports:
+      - "8080:80"  # Exposition du port 80 sur le port 8080 de l'hôte
+      - "8443:443" # Exposition du port 443 sur le port 8443 de l'hôte
+    devices:
+      - "/dev/tty:/dev/tty"  # Accès au terminal de l'appareil (utilisation spécifique)
+    depends_on:
+      - mariadb  # Utilisation de 'depends_on' au lieu de 'links'
+    networks:
+      - default  # Connecter à un réseau par défaut ou spécifier un réseau
+
+  mariadb:
+    build:
+      context: .
+      dockerfile: Dockerfile-mariadb
+    container_name: mariadb
+    # Si le port MariaDB doit être accessible depuis l'hôte, décommentez la ligne suivante :
+    # ports:
+    #   - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword  # Définir un mot de passe root (changez 'rootpassword' pour votre mot de passe)
+      - MYSQL_DATABASE=sentrifugo_db      # Nom de la base de données à créer
+      - MYSQL_USER=sentrifugo_user        # Nom de l'utilisateur de la base de données
+      - MYSQL_PASSWORD=sentrifugo_pass    # Mot de passe pour l'utilisateur de la base de données
+    volumes:
+      - mariadb_data:/var/lib/mysql  # Persistance des données MariaDB
+    networks:
+      - default  # Connecter à un réseau par défaut ou spécifier un réseau
+
+# Volumes pour la persistance des données
+volumes:
+  mariadb_data:
+
+# Réseaux pour la communication entre conteneurs
+networks:
+  default:
+    driver: bridge
