@@ -29,7 +29,7 @@ RUN apt-get install -y apache2 libapache2-mod-php php-curl php-ldap php-mysql ph
 RUN phpenmod mcrypt gd && \
     a2enmod xml2enc rewrite
 
-# Confirmer que les fichiers php.ini existent et modifier la configuration de PHP
+# Configuration des fichiers php.ini
 RUN find /etc/php/ -name php.ini -exec echo Found ini file at: {} \; && \
     find /etc/php/ -name php.ini -exec sed -i 's/variables_order = .*/variables_order = "EGPCS"/' {} \;
 
@@ -39,9 +39,10 @@ RUN groupadd sentrifugo && \
     echo "export APACHE_RUN_USER=docker" >> /etc/apache2/envvars && \
     echo "export APACHE_RUN_GROUP=sentrifugo" >> /etc/apache2/envvars
 
-# Configuration des sites par défaut d'Apache
+# Configuration des sites par défaut d'Apache et set ServerName
 COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
-RUN a2ensite 000-default.conf
+RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf && \
+    a2ensite 000-default.conf
 
 # Assurez-vous que le répertoire /var/www/html existe
 RUN mkdir -p /var/www/html
